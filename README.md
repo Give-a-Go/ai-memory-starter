@@ -1,6 +1,6 @@
-# Agentic Memory using Couchbase Capella for Persistence
+# Google ADK + Couchbase Capella Starter Template
 
-A Python-based travel assistant application that uses Google's Agent Development Kit (ADK) to provide personalized travel recommendations. The assistant uses **Couchbase Capella** (cloud database) for scalable, distributed memory storage - perfect for production deployments with multiple users.
+A starter template for building AI agents using Google's Agent Development Kit (ADK) with **Couchbase Capella** for persistent memory. This template provides a foundation for creating any type of AI agent that needs to remember information across sessions.
 
 ## 🌟 Why Couchbase Capella?
 
@@ -157,7 +157,7 @@ python main.py
 
 1. **Create a Couchbase Capella Account**: Sign up at [Couchbase Capella](https://cloud.couchbase.com/)
 2. **Create a Cluster**: Set up a new cluster in Capella
-3. **Create a Bucket**: Create a bucket for storing travel agent data
+3. **Create a Bucket**: Create a bucket for storing agent data
 4. **Configure Database Access**: Create database credentials
 
 ### Capella Setup Steps
@@ -176,7 +176,7 @@ python main.py
 3. **Create a Bucket**
    - Navigate to "Data Tools" > "Buckets"
    - Click "Add Bucket"
-   - Name: `travel-agent` (or your preferred name)
+   - Name: `agent-memory` (or your preferred name)
    - Memory Quota: 100 MB (minimum)
    - Click "Add Bucket"
 
@@ -196,17 +196,25 @@ python main.py
 ### Database Structure
 
 **Bucket Structure**:
-- **Bucket**: Your chosen bucket name (e.g., `travel-agent`)
+- **Bucket**: Your chosen bucket name (e.g., `agent-memory`)
 - **Scope**: `agent` (configurable in code)
 - **Collection**: `memory` (configurable in code)
 
 **Document Structure**:
 ```json
 {
-  "user::Chris": {
-    "travel_preferences": [
-      "I prefer Delta Airlines",
-      "I like window seats"
+  "user::user_001": {
+    "preferences": [
+      "I prefer dark mode",
+      "Send me daily summaries"
+    ],
+    "facts": [
+      "My favorite color is blue",
+      "I work in software development"
+    ],
+    "notes": [
+      "Interested in AI and machine learning",
+      "Uses Python primarily"
     ]
   }
 }
@@ -221,7 +229,7 @@ The application requires the following environment variables:
 - `COUCHBASE_CONN_STR`: Couchbase Capella connection string (e.g., `couchbases://cb.xxx.cloud.couchbase.com`)
 - `COUCHBASE_USERNAME`: Your Couchbase database username
 - `COUCHBASE_PASSWORD`: Your Couchbase database password
-- `COUCHBASE_BUCKET`: Your bucket name (e.g., `travel-agent`)
+- `COUCHBASE_BUCKET`: Your bucket name (e.g., `agent-memory`)
 
 ## Usage
 
@@ -233,19 +241,22 @@ The application requires the following environment variables:
    - Couchbase bucket name
 3. **Verify Couchbase Capella cluster is running**
 4. **Run the application**: `python main.py`
-5. **Start chatting with the travel assistant!**
+5. **Start chatting with your AI agent!**
 6. **Type 'quit' or 'exit' to end the session**
 
-> **Note**: The assistant will automatically connect to your Couchbase Capella cluster and store/retrieve user preferences in real-time.
+> **Note**: The agent will automatically connect to your Couchbase Capella cluster and store/retrieve information in real-time.
 
 ### Example Conversation
 
 ```
-> Hi
-<<< Assistant: Hello! I'm your friendly travel assistant. I'm here to help make booking your travel as easy as possible by remembering your preferences. How can I assist with your travel plans today?
+> Hi there!
+<<< Assistant: Hello! I'm your AI assistant with persistent memory capabilities. I can remember information across our conversations. How can I help you today?
 
-> I want to fly to Tokyo next week
-<<< Assistant: That sounds exciting! I'd be happy to help you find flights to Tokyo for next week. Let me check if I have any of your travel preferences saved and then search for available flights...
+> Remember that my favorite color is blue
+<<< Assistant: I'll remember that your favorite color is blue! I've saved this information so I can refer to it in future conversations.
+
+> What's my favorite color?
+<<< Assistant: Your favorite color is blue! I remembered that from our earlier conversation.
 ```
 
 ## Project Structure
@@ -253,20 +264,101 @@ The application requires the following environment variables:
 ```
 .
 ├── README.md          # This file
-├── main.py            # Couchbase-powered travel assistant
+├── main.py            # Your AI agent with Couchbase memory
 ├── pyproject.toml     # Project configuration and dependencies
 ├── .env               # Environment variables (create this)
 └── .venv/             # Virtual environment (created during setup)
 ```
 
-## Features Overview
+## 🚀 What's Included
 
-- **💾 Cloud Memory System**: User preferences stored in Couchbase Capella for persistence across sessions
-- **✈️ Smart Flight Search**: AI-powered flight search that considers saved user preferences
-- **💬 Interactive Chat**: Natural language conversation interface with memory
-- **🧠 Preference Learning**: The assistant learns and saves airline and seat preferences
-- **🌐 Multi-user Support**: Each user's preferences stored separately in the cloud
-- **⚡ Real-time Sync**: Instant access to preferences from anywhere
+- **💾 Persistent Memory**: Store and retrieve data using Couchbase Capella
+- **🛠️ Memory Tools**: Pre-built `save_memory()` and `retrieve_memory()` functions
+- **🤖 Agent Framework**: Google ADK setup with session management
+- **📝 Example Tool**: Template for adding custom business logic
+- **🔧 Easy Configuration**: Simple environment variable setup
+- **🌐 Multi-user Ready**: Each user gets separate memory space
+- **⚡ Production Ready**: Scalable cloud database backend
+
+## 🎨 Customizing Your Agent
+
+This is a starter template - here's how to make it your own:
+
+### 1. Update Agent Configuration
+
+In `main.py`, customize these sections:
+
+```python
+# Change these constants
+DEFAULT_USER_ID = "your_user_001"  # Your default user ID
+SCOPE_NAME = "your_scope"          # Your Couchbase scope
+COLLECTION_NAME = "your_collection" # Your Couchbase collection
+
+# Update agent details
+agent = Agent(
+    name="your_agent_name",
+    description="Your agent description",
+    instruction="Your custom instructions...",
+    tools=[save_memory, retrieve_memory, your_custom_tools],
+)
+```
+
+### 2. Add Custom Tools
+
+Replace the example tool with your business logic:
+
+```python
+def your_custom_tool(param1: str, param2: int) -> Dict[str, Any]:
+    """Your custom tool description."""
+    # Your business logic here
+    # Examples: API calls, calculations, data processing
+    
+    return {
+        "status": "success",
+        "result": "your_result"
+    }
+```
+
+### 3. Memory Categories
+
+Use meaningful category names for organizing data:
+
+```python
+# Examples of memory categories
+save_memory("user_preferences", "I prefer dark mode")
+save_memory("conversation_history", "User asked about pricing")
+save_memory("user_profile", "Expert level user")
+save_memory("custom_settings", "Notification frequency: daily")
+```
+
+### 4. Agent Instructions
+
+Customize the agent's behavior by updating the instruction string:
+
+```python
+instruction="""
+You are a [YOUR AGENT TYPE] that specializes in [YOUR DOMAIN].
+
+Your capabilities:
+- [Capability 1]
+- [Capability 2]
+- Remember information using save_memory(category, data)
+- Recall information using retrieve_memory(category)
+
+Always [YOUR SPECIFIC GUIDELINES].
+"""
+```
+
+## 💡 Use Case Examples
+
+This starter template can be adapted for various use cases:
+
+- **💼 Customer Support Agent**: Remember customer preferences, issues, and solutions
+- **📚 Learning Assistant**: Track learning progress, preferences, and knowledge gaps
+- **🛒 Shopping Assistant**: Remember product preferences, budgets, and purchase history
+- **📅 Scheduling Assistant**: Remember availability, meeting preferences, and constraints
+- **🏥 Healthcare Assistant**: Track symptoms, medications, and care preferences
+- **💰 Finance Assistant**: Remember financial goals, risk tolerance, and investment preferences
 
 ## Troubleshooting
 

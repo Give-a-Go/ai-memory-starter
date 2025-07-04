@@ -1,7 +1,6 @@
 import os
 import asyncio
-import random
-from datetime import datetime, timedelta
+from typing import Any, Dict, List
 from dotenv import load_dotenv
 
 from google.adk.agents import Agent
@@ -16,20 +15,29 @@ from couchbase.exceptions import DocumentNotFoundException
 # Load environment variables from .env file
 load_dotenv()
 
-
-USER_ID = "Chris"
+# Configuration
+DEFAULT_USER_ID = "user_001"  # Change this or make it dynamic
+SCOPE_NAME = "agent"          # Change this to match your setup
+COLLECTION_NAME = "memory"     # Change this to match your setup
 
 
 # --- Couchbase Memory Class ---
 class CouchbaseMemory:
+    """Couchbase memory storage for agent data.
+    
+    This class provides basic memory operations for storing and retrieving
+    user data in Couchbase Capella. Perfect for building AI agents that need
+    persistent memory across sessions.
+    """
+    
     def __init__(
         self,
-        conn_str,
-        username,
-        password,
-        bucket_name,
-        scope_name="travel",
-        collection_name="memory",
+        conn_str: str,
+        username: str,
+        password: str,
+        bucket_name: str,
+        scope_name: str = SCOPE_NAME,
+        collection_name: str = COLLECTION_NAME,
     ):
         self.cluster = Cluster(
             conn_str, ClusterOptions(PasswordAuthenticator(username, password))
@@ -37,7 +45,7 @@ class CouchbaseMemory:
         self.bucket = self.cluster.bucket(bucket_name)
         self.scope = self.bucket.scope(scope_name)
         self.collection = self.scope.collection(collection_name)
-        print("[Memory System] Connected to Couchbase Capella")
+        print(f"[Memory System] Connected to Couchbase Capella - Bucket: {bucket_name}, Scope: {scope_name}, Collection: {collection_name}")
 
     def _doc_id(self, user_id: str):
         return f"user::{user_id}"
@@ -71,123 +79,126 @@ class CouchbaseMemory:
         return results
 
 
-# --- Replace with your Capella credentials ---
+# --- Initialize Couchbase Memory ---
 COUCHBASE_CONN_STR = os.getenv("COUCHBASE_CONN_STR")
 COUCHBASE_USERNAME = os.getenv("COUCHBASE_USERNAME")
 COUCHBASE_PASSWORD = os.getenv("COUCHBASE_PASSWORD")
 COUCHBASE_BUCKET = os.getenv("COUCHBASE_BUCKET")
 
-persistent_data = CouchbaseMemory(
+# Initialize the memory system
+memory = CouchbaseMemory(
     conn_str=COUCHBASE_CONN_STR,
     username=COUCHBASE_USERNAME,
     password=COUCHBASE_PASSWORD,
     bucket_name=COUCHBASE_BUCKET,
-    scope_name="agent",  # match your setup
-    collection_name="memory",  # match your setup
+    scope_name=SCOPE_NAME,
+    collection_name=COLLECTION_NAME,
 )
 
 
-def save_user_preference(category: str, preference: str) -> dict:
-    user_id = getattr(save_user_preference, "user_id", USER_ID)
-    persistent_data.add(user_id=user_id, category=category, data=preference)
+# --- Memory Tool Functions ---
+def save_memory(category: str, data: str) -> Dict[str, Any]:
+    """Save data to user's memory in a specific category.
+    
+    Args:
+        category: The category to save data under (e.g., 'preferences', 'facts', 'notes')
+        data: The data to save
+        
+    Returns:
+        Dict with status and message
+    """
+    user_id = getattr(save_memory, "user_id", DEFAULT_USER_ID)
+    memory.add(user_id=user_id, category=category, data=data)
     return {
         "status": "success",
-        "message": f"Preference saved in category '{category}'.",
+        "message": f"Data saved in category '{category}': {data}",
     }
 
 
-def retrieve_user_preferences(category: str) -> dict:
-    user_id = getattr(retrieve_user_preferences, "user_id", USER_ID)
-    results = persistent_data.search_by_category(user_id=user_id, category=category)
-    return {"status": "success", "preferences": results, "count": len(results)}
-
-
-def find_flights(destination: str, departure_date: str) -> dict:
-    user_id = getattr(save_user_preference, "user_id", USER_ID)
-    travel_prefs = persistent_data.search_by_category(user_id, "travel_preferences")
-
-    airline_pref = None
-    seat_pref = None
-
-    for pref in travel_prefs:
-        if (
-            "window" in pref.lower()
-            or "aisle" in pref.lower()
-            or "middle" in pref.lower()
-        ):
-            seat_pref = pref
-        elif (
-            "air" in pref.lower()
-            or "jet" in pref.lower()
-            or "airlines" in pref.lower()
-            or len(pref.split()) >= 1
-        ):
-            airline_pref = pref
-
-    if not airline_pref:
-        return {
-            "status": "error",
-            "message": "No airline preference found. Please add a preferred airline first.",
-        }
-
-    flight = {
-        "airline": airline_pref,
-        "flight_number": f"{airline_pref[:2].upper()}{random.randint(100, 999)}",
-        "departure_time": (
-            datetime.now() + timedelta(hours=random.randint(2, 5))
-        ).strftime("%H:%M"),
-        "arrival_time": (
-            datetime.now() + timedelta(hours=random.randint(10, 14))
-        ).strftime("%H:%M"),
-        "price": f"{random.randint(800, 1800)} EUR",
-        "notes": (
-            f"Seat preference '{seat_pref}' is available."
-            if seat_pref
-            else "Standard seat options available."
-        ),
+def retrieve_memory(category: str) -> Dict[str, Any]:
+    """Retrieve all data from a specific category in user's memory.
+    
+    Args:
+        category: The category to retrieve data from
+        
+    Returns:
+        Dict with status, data list, and count
+    """
+    user_id = getattr(retrieve_memory, "user_id", DEFAULT_USER_ID)
+    results = memory.search_by_category(user_id=user_id, category=category)
+    return {
+        "status": "success", 
+        "data": results, 
+        "category": category,
+        "count": len(results)
     }
 
-    print(
-        f"INFO: Generated 1 flight to {destination} on {departure_date} for preferred airline: {airline_pref}"
-    )
 
-    return {"status": "success", "flights": [flight]}
+# --- Example Custom Tool Function ---
+def example_tool(query: str) -> Dict[str, Any]:
+    """Example tool function - replace this with your own business logic.
+    
+    Args:
+        query: User query or input
+        
+    Returns:
+        Dict with status and response
+    """
+    # This is where you'd implement your custom business logic
+    # For example: API calls, calculations, data processing, etc.
+    
+    return {
+        "status": "success",
+        "message": f"Processed query: {query}",
+        "example_data": "This is example output - replace with your logic"
+    }
 
 
-travel_agent = Agent(
-    name="travel_assistant",
-    model="gemini-2.5-flash",
-    description="A helpful travel assistant that remembers user preferences to provide personalized recommendations.",
+# --- Create Your Agent ---
+agent = Agent(
+    name="memory_agent_starter",  # Change this to your agent name
+    model="gemini-2.5-flash",     # You can change the model if needed
+    description="A helpful AI assistant with persistent memory capabilities.",  # Update description
     instruction="""
-You are a friendly and efficient Travel Assistant. Your goal is to make booking travel as easy as possible by remembering user preferences.
+You are a helpful AI assistant with persistent memory capabilities powered by Couchbase Capella.
 
-Flight Search Workflow:
-1. Always use `retrieve_user_preferences` with category 'travel_preferences' to recall memory.
-2. Then call `find_flights` with destination and date only — it will look up memory internally.
-3. You only return flights that match the user's preferred airline.
-4. You always mention the user's preferred seat type, if available.
-5. If no preferences exist, guide the user to save them using `save_user_preference`.
-""",
-    tools=[save_user_preference, retrieve_user_preferences, find_flights],
+You have access to memory functions that allow you to:
+1. Save information using `save_memory(category, data)` - use categories like 'preferences', 'facts', 'notes', etc.
+2. Retrieve information using `retrieve_memory(category)` - get all data from a specific category
+3. Process requests using `example_tool(query)` - replace this with your custom tools
+
+Always use memory functions to:
+- Remember user preferences and important information
+- Retrieve context from previous conversations
+- Provide personalized responses based on stored data
+
+Be conversational, helpful, and make good use of the memory system to provide a personalized experience.
+""",  # Update instructions for your use case
+    tools=[save_memory, retrieve_memory, example_tool],  # Add your custom tools here
 )
 
 
+# --- Session Configuration ---
 session_service = InMemorySessionService()
-APP_NAME = "travel_assistant_app"
+APP_NAME = "memory_agent_starter"  # Change this to your app name
 SESSION_ID = "session_001"
 
 runner = Runner(
-    agent=travel_agent,
+    agent=agent,
     app_name=APP_NAME,
     session_service=session_service,
 )
 
 
+# --- Agent Communication Functions ---
 async def call_agent_async(query: str, user_id: str, session_id: str):
+    """Send a query to the agent and get a response."""
     print(f"\n>>> User ({user_id}): {query}")
     content = types.Content(role="user", parts=[types.Part(text=query)])
-    setattr(save_user_preference, "user_id", user_id)
-    setattr(retrieve_user_preferences, "user_id", user_id)
+    
+    # Set user_id for memory functions
+    setattr(save_memory, "user_id", user_id)
+    setattr(retrieve_memory, "user_id", user_id)
 
     async for event in runner.run_async(
         user_id=user_id, session_id=session_id, new_message=content
@@ -201,19 +212,24 @@ async def call_agent_async(query: str, user_id: str, session_id: str):
 
 
 async def interactive_chat():
-    print("--- Starting Interactive Travel Assistant ---")
-    print("Type 'quit' to end the session.")
+    """Start an interactive chat session with the agent."""
+    print("--- Starting Interactive Memory Agent ---")
+    print("Your agent has persistent memory powered by Couchbase Capella!")
+    print("Type 'quit' or 'exit' to end the session.")
+    print("\nTry asking the agent to remember something, then ask about it later!")
+    
     while True:
         user_query = input("\n> ")
         if user_query.lower() in ["quit", "exit"]:
             print("Ending session. Goodbye!")
             break
-        await call_agent_async(query=user_query, user_id=USER_ID, session_id=SESSION_ID)
+        await call_agent_async(query=user_query, user_id=DEFAULT_USER_ID, session_id=SESSION_ID)
 
 
 async def create_session():
+    """Create a new session for the agent."""
     await session_service.create_session(
-        app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
+        app_name=APP_NAME, user_id=DEFAULT_USER_ID, session_id=SESSION_ID
     )
 
 
